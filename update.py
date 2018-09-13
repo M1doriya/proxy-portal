@@ -4,7 +4,8 @@ import subprocess
 #subprocess.call(['chmod', '0777', '/etc/squid/squid.conf'])
 def update_port(port_num):
 	file = open('/etc/squid/squid.conf','w') 
-	file.write("\n"+"acl              "+str(port_num))
+	file.write("\n"+"acl Safe_ports port "+str(port_num))
+	file.write("\n"+"http_access deny !Safe_ports")
 	file.close()
 	subprocess.call('sudo systemctl reload squid.service',shell=True)
 

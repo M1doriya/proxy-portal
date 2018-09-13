@@ -13,6 +13,7 @@ from flask import Flask, request, flash, url_for, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy 
 from werkzeug import secure_filename
 import json
+from . import update
 
 
 app = Flask(__name__, static_url_path='/static')
@@ -102,9 +103,9 @@ def login():
 		curr.execute("INSERT INTO input (curr_date,data) VALUES (?,?)",(date1,inputtext))
 		conn.commit() 
 		conn.close()
+		update.update_port(inputtext)
 	return render_template("login.html",message = message)
-      
-
+    
 
 
 if __name__ == '__main__':

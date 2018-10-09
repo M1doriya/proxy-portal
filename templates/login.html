@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,35 +41,53 @@
 					</span>
 
 					<span class="login100-form-title p-b-34 p-t-27" style="opacity:1">
-						Enter Data
+						Log in
 					</span>
 
 					<div class="wrap-input100 validate-input" data-validate = "Enter username" style="opacity:1">
-						<input class="input100" type="text" name="inputtext" placeholder="Input Text">
+						<input class="input100" type="text" name="username" placeholder="Username">
 						<span class="focus-input100" data-placeholder="&#xf207;" style="opacity:1"></span>
 					</div>
 
-					<!--<div class="wrap-input100 validate-input" data-validate="Enter password">
+					<div class="wrap-input100 validate-input" data-validate="Enter password">
 						<input class="input100" type="password" name="pass" placeholder="Password">
 						<span class="focus-input100" data-placeholder="&#xf191;"></span>
 					</div>
-					-->
+
 					<br>
 					<br>
 					<div class="container-login100-form-btn">
 						<button class="login100-form-btn">
-							Enter
+							Login
 						</button>
 
 					</div>
+
+					<div class="text-center p-t-90" style = "margin-top: -80px">
+						{% if message is not none %}
+							<a class="txt1">
+								<strong>{{message}}</strong><br>
+							</a>
+						{% endif %}
 						
-					
+							
+					</div>
 				</form>
 			</div>
 		</div>
 	</div>
 	
-
+ <footer class="footer">
+                <div class="container-fluid">
+                    <p class="copyright pull-right">
+                        &copy;
+                        <script>
+                            document.write(new Date().getFullYear())
+                        </script>
+                        <a href="./dashboard.html">Group-12</a>
+                    </p>
+                </div>
+            </footer>
 	<div id="dropDownSelect1"></div>
 	
 <!--===============================================================================================-->

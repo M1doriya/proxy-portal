@@ -1,4 +1,4 @@
-from flask import Flask,render_template,redirect, url_for, request
+from flask import Flask,render_template,redirect, url_for, request, session
 import sqlite3
 from datetime import datetime, date
 from functools import wraps
@@ -13,6 +13,8 @@ from flask import Flask, request, flash, url_for, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy 
 from werkzeug import secure_filename
 import json
+from flask_oauth import OAuth
+from requests_oauthlib import OAuth2Session
 #import tkMessageBox
 
 
@@ -20,10 +22,25 @@ app = Flask(__name__, static_url_path='/static')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sqlite3'
 app.config['SECRET_KEY'] = "random string"
+GOOGLE_CLIENT_ID = '380096036354-p766je2egc68kknfofn15jm2ovktfnc8.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET = 'CDdsTHtPV7XAD4QTkBAMcspV'
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://///C:/Users/DELL/new/DBMS-Project/dbms.db'
+REDIRECT_URI = '/oauth2callback'
+
 db = SQLAlchemy(app)
+oauth = OAuth()
 
-
+google = oauth.remote_app('google',
+                          base_url='https://www.google.com/accounts/',
+                          authorize_url='https://accounts.google.com/o/oauth2/auth',
+                          request_token_url=None,
+                          request_token_params={'scope': 'https://www.googleapis.com/auth/userinfo.email',
+                                                'response_type': 'code'},
+                          access_token_url='https://accounts.google.com/o/oauth2/token',
+                          access_token_method='POST',
+                          access_token_params={'grant_type': 'authorization_code'},
+                          consumer_key=GOOGLE_CLIENT_ID,
+                          consumer_secret=GOOGLE_CLIENT_SECRET)
 
 
 class users(db.Model):
@@ -42,79 +59,7 @@ class users(db.Model):
 	image_link = db.Column(db.String(200))
 
 
-'''conn = sqlite3.connect('students.sqlite3')
-cur = conn.cursor()
-cur.execute("DROP TABLE rating")
 
-
-# #list_columns=['r_id','course_code','question_id','faculty_email','student_email','rating']
-
-
-
-# @app.route('/new', methods = ['GET', 'POST'])
-# def new():
-#    if request.method == 'POST':
-#       if not request.form['name'] or not request.form['city'] or not request.form['addr']:
-#          flash('Please enter all the fields', 'error')
-#       else:
-#          student = students(request.form['name'], request.form['city'],
-#             request.form['addr'], request.form['pin'])
-         
-#          db.session.add(student)
-#          db.session.commit()
-#          flash('Record was successfully added')
-#          return redirect(url_for('show_all'))
-#    return render_template('new.html')'''
-
-
-# # app.config['MAIL_SERVER']='smtp.gmail.com'
-# # app.config['MAIL_PORT'] = 587
-# # app.config['MAIL_USERNAME'] = ''
-# # app.config['MAIL_PASSWORD'] = ''
-# # app.config['MAIL_USE_TLS'] = True
-# # app.config['MAIL_USE_SSL'] = False
-
-# # mail = Mail(app)
-
-
-# #sqliteAdminBP = sqliteAdminBlueprint(dbPath = 'students.sqlite3')
-# '''conn = sqlite3.connect('students.sqlite3')
-# print ("Opened database successfully")
-# sqliteAdminBP = sqliteAdminBlueprint(dbPath = 'students.sqlite3')
-# #app.register_blueprint(sqliteAdminBP, url_prefix='/admin')
-# conn.execute('CREATE TABLE IF NOT EXISTS courses (course_code TEXT primary key,couse_name TEXT, credits INT, department TEXT, semester INT)')
-# print ("COURSES Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS users ( email TEXT primary key, username TEXT,name TEXT, dob DATE, pass TEXT, type TEXT, semester INT,department TEXT,is_active INT,secret_key INT)')
-# print ("USERS Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS users_courses (S_no integer not null primary key AUTOINCREMENT,useremail TEXT,course_code TEXT, foreign key(useremail) references users(email),foreign key (course_code) references courses(course_code))')
-# print ("USERS_courses Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS admin (username TEXT primary key, pass TEXT, email TEXT)')
-# print ("ADMIN Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS query (S_no integer not null primary key AUTOINCREMENT,useremail TEXT,query TEXT,reply_to_query TEXT,seen integer,foreign key (useremail) references users(email))')
-# print ("QUERY Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS questions (question_id TEXT primary key, question_type TEXT, question TEXT)')
-# print ("QUESTIONS Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS question_answer (S_no integer not null primary key AUTOINCREMENT,question_id TEXT, useremail TEXT,foreign key (useremail) references users(email),foreign key (question_id) references questions(question_id))')
-# print ("QUESTIONS Table created successfully")
-# conn.execute('CREATE TABLE IF NOT EXISTS rating (r_id integer not null primary key AUTOINCREMENT,course_code TEXT, question_id TEXT, faculty_email TEXT,student_email TEXT,rating INT)')
-# print ("RATING Table created successfully")
-# cur = conn.cursor()
-# cur.execute("SELECT * FROM users")
-# al = cur.fetchall()
-# print (al)
-# cur.execute("SELECT * FROM query")
-# al = cur.fetchall()
-# print (al)
-# conn.close()'''
-
-
-
-'''
-sqliteAdminBP = sq liteAdminBlueprint(
-  dbPath = 'students.sqlite3',
-  decorator = do_admin_login
-)	
-app.register_blueprint(sqliteAdminBP, url_prefix='/admin')'''
 class MyUserView(ModelView):
 	column_display_pk = True
 	can_create = True
@@ -180,69 +125,62 @@ type1 = ""
 
 @app.route('/')
 def index():
-   return render_template("index.html")
+    access_token = session.get('access_token')
+    if access_token is None:
+        return redirect(url_for('login'))
+ 
+    access_token = access_token[0]
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+ 
+    headers = {'Authorization': 'OAuth '+access_token}
+    req = Request('https://www.googleapis.com/oauth2/v1/userinfo',
+                  None, headers)
+    try:
+        res = urlopen(req)
+    except URLError as e:
+        if e.code == 401:
+            # Unauthorized - bad token
+            session.pop('access_token', None)
+            return redirect(url_for('login'))
+        return res.read()
 
-
-@app.route('/login',methods = ['GET','POST'])
+    temp = res.read()
+    print(temp.decode("utf-8").lstrip('{').rstrip('}').split(',')[1].lstrip('\n  "email":'))
+    
+    return redirect('portrequest')
+ 
+ 
+@app.route('/login')
 def login():
-	message = None
-	global current,type1
-	if session.get('logged_in'):
-		conn = sqlite3.connect('students.sqlite3')
-		print ("Opened database successfully")
-		curr = conn.cursor()
-		curr.execute('SELECT type1 FROM users where email = (?)',(current+"@iiita.ac.in",))
-		typeo = curr.fetchone()[0]
-		if typeo=="Student":
-			return redirect(url_for('dashboard',id = current))
-		elif typeo=="Faculty":
-			return redirect(url_for('facultydashboard',id = current))
+    callback=url_for('authorized', _external=True)
+    return google.authorize(callback=callback)
+ 
+ 
+def get_google_auth(token=None):
+    if token:
+        return OAuth2Session(GOOGLE_CLIENT_ID, token=token)
+    
+    oauth = OAuth2Session(
+        GOOGLE_CLIENT_ID,
+        redirect_uri=REDIRECT_URI)
 
-	if request.method == 'GET':
-		return render_template("login.html",message = None)
-		
-	if request.method == 'POST':
-		username=request.form.get('username',)
-		password=request.form.get('pass',)
-		print (username)
-		print (password)
-		if password == 'password' and username == 'admin':
-			session['admin_logged_in'] = True
-			return redirect('http://127.0.0.1:5000/admin')						#### change to host url 
-		conn = sqlite3.connect('students.sqlite3')
-		print ("Opened database successfully")
-		curr = conn.cursor()
-		#curr.execute("SELECT count(*) FROM users WHERE email = ?", (request.form.get('username',''),))
-		curr.execute("SELECT count(*) FROM users WHERE email = (?)",(username,))
-		data = curr.fetchone()[0]
-		if data ==0:
-			print('There is no user%s'%request.form.get('username'))
-			message = "PLEASE REGISTER USER DOES NOT EXIST"
-		else:
-			print('Component %s found in %s row(s)'%(username,data))
-			curr.execute("SELECT count(*) FROM users WHERE email = (?)",(username,))
-			check = curr.fetchone()[0]
-			if check==0:
-				return render_template("login.html",message = "account does not exist")
+    return oauth
 
-			curr.execute("SELECT count(*) FROM users WHERE email = (?) and password = (?)",(username,password))
-			check = curr.fetchall()[0]
-			print ("the value of ----- :"),check[0]
-			if check[0] != 0:
-				message = "success"
-				print ("success")
-				user=username.split("@")[0]
-				session['logged_in'] = True
-				current = user
+ 
+@app.route(REDIRECT_URI)
+@google.authorized_handler
+def authorized(resp):
+    access_token = resp['access_token']
+    session['access_token'] = access_token, ''
+    return redirect(url_for('index'))
+ 
+ 
+@google.tokengetter
+def get_access_token():
+    return session.get('access_token')
 
-				curr.execute("SELECT type1 FROM users WHERE email = (?)",(username,))
-				user_type=curr.fetchone()[0]
-				conn.close()
-				return redirect(url_for('portrequest',id=user))
-			else:
-				return render_template("login.html",message = "INCORRECT PASSWORD")	
-		conn.close()
-	return render_template("login.html",message = message)
+
 
 @app.route('/portrequest',methods = ['GET','POST'])
 def portrequest():

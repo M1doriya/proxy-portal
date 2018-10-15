@@ -5,7 +5,6 @@ from functools import wraps
 from flask import Flask,render_template,redirect, url_for,request,session,flash
 import os
 import random
-from flask_mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
 from flask_admin import Admin, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
@@ -15,7 +14,6 @@ from werkzeug import secure_filename
 import json
 from flask_oauth import OAuth
 from requests_oauthlib import OAuth2Session
-#import tkMessageBox
 
 
 app = Flask(__name__, static_url_path='/static')
@@ -125,36 +123,42 @@ type1 = ""
 
 @app.route('/')
 def index():
-    access_token = session.get('access_token')
-    if access_token is None:
-        return redirect(url_for('login'))
+	global current
+	access_token = session.get('access_token')
+	if access_token is None:
+		return redirect(url_for('login'))
  
-    access_token = access_token[0]
-    from urllib.request import Request, urlopen
-    from urllib.error import URLError
- 
-    headers = {'Authorization': 'OAuth '+access_token}
-    req = Request('https://www.googleapis.com/oauth2/v1/userinfo',
-                  None, headers)
-    try:
-        res = urlopen(req)
-    except URLError as e:
-        if e.code == 401:
-            # Unauthorized - bad token
-            session.pop('access_token', None)
-            return redirect(url_for('login'))
-        return res.read()
+	access_token = access_token[0]
+	from urllib.request import Request, urlopen
+	from urllib.error import URLError
 
-    temp = res.read()
-    print(temp.decode("utf-8").lstrip('{').rstrip('}').split(',')[1].lstrip('\n  "email":'))
-    
-    return redirect('portrequest')
- 
+	headers = {'Authorization': 'OAuth '+access_token}
+	req = Request('https://www.googleapis.com/oauth2/v1/userinfo',
+	              None, headers)
+	try:
+		res = urlopen(req)
+	except URLError as e:
+	    if e.code == 401:
+	        # Unauthorized - bad token
+	        session.pop('access_token', None)
+	        return redirect(url_for('login'))
+	    return res.read()
+
+	temp = res.read()
+	data=temp.decode('utf8')
+	#print(data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(','))
+	session['logged_in'] = True
+	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',')
+	return redirect('portrequest')
+ 	
  
 @app.route('/login')
 def login():
-    callback=url_for('authorized', _external=True)
-    return google.authorize(callback=callback)
+	if not session.get('logged_in'):
+	    callback=url_for('authorized', _external=True)
+	    return google.authorize(callback=callback)
+	else:
+		return redirect('portrequest')
  
  
 def get_google_auth(token=None):
@@ -186,7 +190,7 @@ def get_access_token():
 def portrequest():
 	message = None
 	global current,type1
-	
+	print(current)
 	if request.method == 'GET':
 		return render_template("portrequest.html",message = None)
 		
@@ -206,9 +210,9 @@ def portrequest():
 
 
 if __name__ == '__main__':
-	app.debug = True
+	app.debug = False
 	app.secret_key = os.urandom(12)
 
 	db.create_all()
 
-	app.run(debug = True)
+	app.run(debug = False)

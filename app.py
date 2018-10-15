@@ -47,13 +47,7 @@ class users(db.Model):
 	email = db.Column(db.String(40),primary_key=True)
 	username = db.Column(db.String(40))
 	name = db.Column(db.String(50))
-	dob = db.Column(db.Date())
-	password = db.Column(db.String(50))
-	type1 = db.Column(db.String(20))
-	semester = db.Column(db.Integer)
-	department = db.Column(db.String(30))
 	is_active = db.Column(db.Integer)
-	secret_key = db.Column(db.Integer)
 	image_link = db.Column(db.String(200))
 
 
@@ -61,15 +55,16 @@ class users(db.Model):
 class MyUserView(ModelView):
 	column_display_pk = True
 	can_create = True
-	column_list = ('email','username','name','dob','password','type1','semester','department','is_active','secret_key','image_link')
-	form_columns = ['email','username','name','dob','password','type1','semester','department','is_active','secret_key','image_link']
-	column_filters = ['email','username','name','dob','password','type1','semester','department','is_active','secret_key','image_link']
+	column_list = ('email','username','name','is_active','image_link')
+	form_columns = ['email','username','name','is_active','image_link']
+	column_filters = ['email','username','name','is_active','image_link']
 
-class input(db.Model):
-	__tablename__ = 'input'
+class Input(db.Model):
+	__tablename__ = 'Input'
 	column_display_pk = True
-	curr_date = db.Column(db.DateTime(), primary_key=True)
-	username = db.Column(db.String(40))
+	id = db.Column(db.String(200),primary_key=True)
+	useremail = db.Column(db.String(40))
+	curr_date = db.Column(db.DateTime())
 	port_requested = db.Column(db.String(40))
 	
 
@@ -79,9 +74,9 @@ class input(db.Model):
 class MyInputView(ModelView):
 	column_display_pk = True
 	can_create = True
-	column_list = ('curr_date', 'username','port_requested')
-	form_columns = ['curr_date', 'username','port_requested']
-	column_filters = ['curr_date', 'username','port_requested']
+	column_list = ('id','curr_date', 'useremail','port_requested')
+	form_columns = ['id','curr_date', 'useremail','port_requested']
+	column_filters = ['id','curr_date', 'useremail','port_requested']
 
 
 
@@ -113,7 +108,7 @@ class MyAdminIndexView(AdminIndexView):
 
 db.create_all()
 admin = Admin(app,index_view=MyAdminIndexView())
-admin.add_view(MyInputView(input,db.session))
+admin.add_view(MyInputView(Input,db.session))
 admin.add_view(MyUserView(users,db.session))
 
 
@@ -148,7 +143,7 @@ def index():
 	data=temp.decode('utf8')
 	#print(data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(','))
 	session['logged_in'] = True
-	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',')
+	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')
 	return redirect('portrequest')
  	
  
@@ -191,6 +186,9 @@ def portrequest():
 	message = None
 	global current,type1
 	print(current)
+	if not session.get('logged_in'):
+		return redirect('login')
+
 	if request.method == 'GET':
 		return render_template("portrequest.html",message = None)
 		
@@ -202,10 +200,10 @@ def portrequest():
 		conn = sqlite3.connect('students.sqlite3')
 		print ("Opened database successfully")
 		curr = conn.cursor()
-		curr.execute("INSERT INTO input (curr_date,data) VALUES (?,?)",(date1,inputtext))
+		curr.execute("INSERT INTO Input (id,useremail,curr_date,port_requested) VALUES (?,?,?,?)",(str(date1)+current,current,date1,inputtext))
 		conn.commit() 
 		conn.close()
-		update.update_port(inputtext)
+		#update.update_port(inputtext)
 		return render_template("portrequest.html",message = message)
 
 

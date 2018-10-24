@@ -66,7 +66,7 @@ class Input(db.Model):
 	useremail = db.Column(db.String(40))
 	curr_date = db.Column(db.DateTime())
 	port_requested = db.Column(db.String(40))
-	
+	device = db.Column(db.String(40))
 
 
 
@@ -74,9 +74,29 @@ class Input(db.Model):
 class MyInputView(ModelView):
 	column_display_pk = True
 	can_create = True
-	column_list = ('id','curr_date', 'useremail','port_requested')
-	form_columns = ['id','curr_date', 'useremail','port_requested']
-	column_filters = ['id','curr_date', 'useremail','port_requested']
+	column_list = ('id','curr_date', 'useremail','port_requested','device')
+	form_columns = ['id','curr_date', 'useremail','port_requested','device']
+	column_filters = ['id','curr_date', 'useremail','port_requested','device']
+
+
+class Device(db.Model):
+	__tablename__ = 'Device'
+	column_display_pk = True
+	id = db.Column(db.String(200),primary_key=True)
+	useremail = db.Column(db.String(40))
+	curr_date = db.Column(db.DateTime())
+	mac_address = db.Column(db.String(40))
+	alias = db.Column(db.String(40))
+
+
+
+
+class MyDeviceView(ModelView):
+	column_display_pk = True
+	can_create = True
+	column_list = ('id','curr_date', 'useremail','mac_address','alias')
+	form_columns = ['id','curr_date', 'useremail','mac_address','alias']
+	column_filters = ['id','curr_date', 'useremail','mac_address','alias']
 
 
 
@@ -110,6 +130,7 @@ db.create_all()
 admin = Admin(app,index_view=MyAdminIndexView())
 admin.add_view(MyInputView(Input,db.session))
 admin.add_view(MyUserView(users,db.session))
+admin.add_view(MyDeviceView(Device,db.session))
 
 
 current = None
@@ -190,21 +211,62 @@ def portrequest():
 		return redirect('login')
 
 	if request.method == 'GET':
-		return render_template("portrequest.html",message = None)
+		conn = sqlite3.connect('students.sqlite3')
+		cur = conn.cursor()
+		cur.execute("SELECT * FROM Device WHERE useremail = (?)",(current,))
+		macs = cur.fetchall()
+		return render_template("portrequest.html",macs=macs,message = None)
 		
 	if request.method == 'POST':
 		inputtext = request.form.get('inputtext',)
+		inputtext2 = request.form.get('inputtext2',)
+		conn = sqlite3.connect('students.sqlite3')
+		cur = conn.cursor()
+		cur.execute("SELECT mac_address FROM Device WHERE useremail = (?) and alias = (?)",(current,inputtext2,))
+		mac_address = cur.fetchone()[0]
+		print(mac_address)
+		date1 = datetime.now()
+		
+		print ("Opened database successfully")
+		curr = conn.cursor()
+		curr.execute("INSERT INTO Input (id,useremail,curr_date,port_requested,device) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,mac_address))
+		conn.commit() 
+		
+		cur = conn.cursor()
+		cur.execute("SELECT * FROM Device WHERE useremail = (?)",(current,))
+		macs = cur.fetchall()
+		conn.close()
+		#update.update_port(inputtext)
+		message = "port request accepted"
+		return render_template("portrequest.html",macs=macs,message = message)
+
+
+@app.route('/addDevice',methods = ['GET','POST'])
+def addDevice():
+	message = None
+	global current,type1
+	print(current)
+	if not session.get('logged_in'):
+		return redirect('login')
+
+	if request.method == 'GET':
+		return render_template("addDevice.html",message = None)
+		
+	if request.method == 'POST':
+		inputtext = request.form.get('inputtext',)
+		alias = request.form.get('alias',)
+		
 		date1 = datetime.now()
 		print (inputtext)
 		print (date1)
 		conn = sqlite3.connect('students.sqlite3')
 		print ("Opened database successfully")
 		curr = conn.cursor()
-		curr.execute("INSERT INTO Input (id,useremail,curr_date,port_requested) VALUES (?,?,?,?)",(str(date1)+current,current,date1,inputtext))
+		curr.execute("INSERT INTO Device (id,useremail,curr_date,mac_address,alias) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,alias))
 		conn.commit() 
 		conn.close()
 		#update.update_port(inputtext)
-		return render_template("portrequest.html",message = message)
+		return render_template("addDevice.html",message = message)
 
 
 if __name__ == '__main__':

@@ -39,24 +39,15 @@
 						<img src="/static/images/icons/logo.jpg" style = "border-radius: 20px;height:100px;">
 					</span>
 
-					<span class="login100-form-title p-b-34 p-t-27" style="opacity:1">
-						Enter Data
-					</span>
+					<div class="wrap-input100 validate-input" data-validate = "Enter username" style="opacity:1">
+						<input class="input100" type="text" name="inputtext" placeholder="Enter MAC of New Device">
+						<span class="focus-input100" data-placeholder="&#xf207;" style="opacity:1"></span>
+					</div>
 
 					<div class="wrap-input100 validate-input" data-validate = "Enter username" style="opacity:1">
-						<input class="input100" type="text" name="inputtext" placeholder="Input Port to be opened">
+						<input class="input100" type="text" name="alias" placeholder="Enter Alias of New Device">
 						<span class="focus-input100" data-placeholder="&#xf207;" style="opacity:1"></span>
 					</div>
-					<div class="wrap-input100 validate-input" data-validate = "Enter username" style="opacity:1">
-						<input class="input100" type="text" name="inputtext2" placeholder="Input device alias">
-						<span class="focus-input100" data-placeholder="&#xf207;" style="opacity:1"></span>
-					</div>
-					<!--<div class="wrap-input100 validate-input" data-validate="Enter password">
-						<input class="input100" type="password" name="pass" placeholder="Password">
-						<span class="focus-input100" data-placeholder="&#xf191;"></span>
-					</div>
-					-->
-					<br>
 					<br>
 					<div class="container-login100-form-btn">
 						<button class="login100-form-btn">
@@ -64,9 +55,7 @@
 						</button>
 
 					</div>
-					{% if message is not none %}
-						{{message}}
-					{% endif %}
+						
 					
 				</form>
 			</div>

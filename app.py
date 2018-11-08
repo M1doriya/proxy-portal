@@ -14,6 +14,7 @@ from werkzeug import secure_filename
 import json
 from flask_oauth import OAuth
 from requests_oauthlib import OAuth2Session
+import update
 
 
 app = Flask(__name__, static_url_path='/static')
@@ -66,7 +67,7 @@ class Input(db.Model):
 	useremail = db.Column(db.String(40))
 	curr_date = db.Column(db.DateTime())
 	port_requested = db.Column(db.String(40))
-	device = db.Column(db.String(40))
+	website_requested = db.Column(db.String(200))
 
 
 
@@ -74,9 +75,9 @@ class Input(db.Model):
 class MyInputView(ModelView):
 	column_display_pk = True
 	can_create = True
-	column_list = ('id','curr_date', 'useremail','port_requested','device')
-	form_columns = ['id','curr_date', 'useremail','port_requested','device']
-	column_filters = ['id','curr_date', 'useremail','port_requested','device']
+	column_list = ('id','curr_date', 'useremail','port_requested','website_requested')
+	form_columns = ['id','curr_date', 'useremail','port_requested','website_requested']
+	column_filters = ['id','curr_date', 'useremail','port_requested','website_requested']
 
 
 class Device(db.Model):
@@ -165,6 +166,39 @@ def index():
 	#print(data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(','))
 	session['logged_in'] = True
 	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')
+
+	# making files like user_squid.conf and user_mac.txt
+	name=current[:-12]
+	conn = sqlite3.connect('students.sqlite3')
+	cur = conn.cursor()
+	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
+	if not cur.fetchone(): 
+		'''filename = "/etc/squid/users.conf"
+		os.makedirs(os.path.dirname(filename), exist_ok=True)
+		file1 = open(filename,"a")
+		file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
+		file1.close()
+		filename = "/etc/squid/config_files/"+name+"/"+name+"_squid.conf"
+		os.makedirs(os.path.dirname(filename), exist_ok=True)
+		file1 = open(filename,"a")
+		file1.write('\nacl '+name+'_mac arp "/etc/squid/config_files/'+name+'/'+name+'_mac.lst"')
+		file1.write('\nacl '+name+'_website dstdomain "/etc/squid/config_files/'+name+'/'+name+'_website.lst"')	
+		file1.write('\nhttp_access deny '+name+'_website '+name+'_mac')
+		#file1.write('\nhttp_access deny '+name+'_mac')
+		file1.close()			
+		filename = "/etc/squid/config_files/"+name+"/"+name+"_mac.lst"
+		os.makedirs(os.path.dirname(filename), exist_ok=True)
+		open(filename,"a").close()
+		filename = "/etc/squid/config_files/"+name+"/"+name+"_port.lst"
+		os.makedirs(os.path.dirname(filename), exist_ok=True)
+		open(filename,"a").close()
+		filename = "/etc/squid/config_files/"+name+"/"+name+"_website.lst"
+		os.makedirs(os.path.dirname(filename), exist_ok=True)
+		open(filename,"a").close()'''
+		curr = conn.cursor()
+		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
+		conn.commit() 
+	conn.close()
 	return redirect('portrequest')
  	
  
@@ -211,34 +245,29 @@ def portrequest():
 		return redirect('login')
 
 	if request.method == 'GET':
-		conn = sqlite3.connect('students.sqlite3')
-		cur = conn.cursor()
-		cur.execute("SELECT * FROM Device WHERE useremail = (?)",(current,))
-		macs = cur.fetchall()
-		return render_template("portrequest.html",macs=macs,message = None)
+		return render_template("request.html",message = None)
 		
 	if request.method == 'POST':
 		inputtext = request.form.get('inputtext',)
 		inputtext2 = request.form.get('inputtext2',)
 		conn = sqlite3.connect('students.sqlite3')
-		cur = conn.cursor()
+		'''cur = conn.cursor()
 		cur.execute("SELECT mac_address FROM Device WHERE useremail = (?) and alias = (?)",(current,inputtext2,))
 		mac_address = cur.fetchone()[0]
-		print(mac_address)
+		print(mac_address)'''
 		date1 = datetime.now()
 		
 		print ("Opened database successfully")
 		curr = conn.cursor()
-		curr.execute("INSERT INTO Input (id,useremail,curr_date,port_requested,device) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,mac_address))
+		curr.execute("INSERT INTO Input (id,useremail,curr_date,port_requested,website_requested) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,inputtext2))
 		conn.commit() 
-		
-		cur = conn.cursor()
-		cur.execute("SELECT * FROM Device WHERE useremail = (?)",(current,))
-		macs = cur.fetchall()
 		conn.close()
+		name=current[:-12]
+		#if inputtext2:
+		#	update.add_website(name,inputtext2)
 		#update.update_port(inputtext)
-		message = "port request accepted"
-		return render_template("portrequest.html",macs=macs,message = message)
+		message = "port/website request accepted"
+		return render_template("request.html",message = message)
 
 
 @app.route('/addDevice',methods = ['GET','POST'])
@@ -265,7 +294,10 @@ def addDevice():
 		curr.execute("INSERT INTO Device (id,useremail,curr_date,mac_address,alias) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,alias))
 		conn.commit() 
 		conn.close()
+		name=current[:-12]
+		#update.add_mac(name,inputtext)
 		#update.update_port(inputtext)
+		message = "device updated"
 		return render_template("addDevice.html",message = message)
 
 

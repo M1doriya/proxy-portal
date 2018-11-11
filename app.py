@@ -71,7 +71,6 @@ class Input(db.Model):
 
 
 
-
 class MyInputView(ModelView):
 	column_display_pk = True
 	can_create = True
@@ -98,6 +97,22 @@ class MyDeviceView(ModelView):
 	column_list = ('id','curr_date', 'useremail','mac_address','alias')
 	form_columns = ['id','curr_date', 'useremail','mac_address','alias']
 	column_filters = ['id','curr_date', 'useremail','mac_address','alias']
+
+
+class DailyData(db.Model):
+	__tablename__ = 'DailyData'
+	column_display_pk = True
+	id = db.Column(db.String(200),primary_key=True)
+	useremail = db.Column(db.String(100))
+	curr_date = db.Column(db.DateTime())
+	data_size = db.Column(db.Integer)
+
+class MyDailyDataView(ModelView):
+	column_display_pk = True
+	can_create = True
+	column_list = ('id', 'useremail','curr_date','data_size')
+	form_columns = ['id', 'useremail','curr_date','data_size']
+	column_filters = ['id', 'useremail','curr_date','data_size']
 
 
 
@@ -132,6 +147,7 @@ admin = Admin(app,index_view=MyAdminIndexView())
 admin.add_view(MyInputView(Input,db.session))
 admin.add_view(MyUserView(users,db.session))
 admin.add_view(MyDeviceView(Device,db.session))
+admin.add_view(MyDailyDataView(DailyData,db.session))
 
 
 current = None
@@ -173,7 +189,7 @@ def index():
 	cur = conn.cursor()
 	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
 	if not cur.fetchone(): 
-		'''filename = "/etc/squid/users.conf"
+		filename = "/etc/squid/users.conf"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
 		file1 = open(filename,"a")
 		file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
@@ -194,7 +210,7 @@ def index():
 		open(filename,"a").close()
 		filename = "/etc/squid/config_files/"+name+"/"+name+"_website.lst"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
-		open(filename,"a").close()'''
+		open(filename,"a").close()
 		curr = conn.cursor()
 		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
 		conn.commit() 
@@ -263,8 +279,8 @@ def portrequest():
 		conn.commit() 
 		conn.close()
 		name=current[:-12]
-		#if inputtext2:
-		#	update.add_website(name,inputtext2)
+		if inputtext2:
+			update.add_website(name,inputtext2)
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
 		return render_template("request.html",message = message)
@@ -295,9 +311,8 @@ def addDevice():
 		conn.commit() 
 		conn.close()
 		name=current[:-12]
-		#update.add_mac(name,inputtext)
+		update.add_mac(name,inputtext)
 		#update.update_port(inputtext)
-		message = "device updated"
 		return render_template("addDevice.html",message = message)
 
 

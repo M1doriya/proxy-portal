@@ -215,7 +215,7 @@ def index():
 		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
 		conn.commit() 
 	conn.close()
-	return redirect('portrequest')
+	return redirect('Userrequest')
  	
  
 @app.route('/login')
@@ -224,7 +224,7 @@ def login():
 	    callback=url_for('authorized', _external=True)
 	    return google.authorize(callback=callback)
 	else:
-		return redirect('portrequest')
+		return redirect('Userrequest')
  
  
 def get_google_auth(token=None):
@@ -252,8 +252,8 @@ def get_access_token():
 
 
 
-@app.route('/portrequest',methods = ['GET','POST'])
-def portrequest():
+@app.route('/Userrequest',methods = ['GET','POST'])
+def Userrequest():
 	message = None
 	global current,type1
 	print(current)

@@ -60,23 +60,45 @@ class MyUserView(ModelView):
 	form_columns = ['email','username','name','is_active','image_link']
 	column_filters = ['email','username','name','is_active','image_link']
 
-class Input(db.Model):
-	__tablename__ = 'Input'
+class portInput(db.Model):
+	__tablename__ = 'portInput'
 	column_display_pk = True
 	id = db.Column(db.String(200),primary_key=True)
 	useremail = db.Column(db.String(40))
-	curr_date = db.Column(db.DateTime())
-	port_requested = db.Column(db.String(40))
-	website_requested = db.Column(db.String(200))
+	port = db.Column(db.String(40))
+	start_date = db.Column(db.DateTime())
+	end_date = db.Column(db.DateTime())
+	is_end = db.Column(db.Integer)
+	is_fault = db.Column(db.Integer)
 
 
-
-class MyInputView(ModelView):
+class MyPortInputView(ModelView):
 	column_display_pk = True
 	can_create = True
-	column_list = ('id','curr_date', 'useremail','port_requested','website_requested')
-	form_columns = ['id','curr_date', 'useremail','port_requested','website_requested']
-	column_filters = ['id','curr_date', 'useremail','port_requested','website_requested']
+	column_list = ('id','useremail','port','start_date','end_date','is_end','is_fault')
+	form_columns = ['id','useremail','port','start_date','end_date','is_end','is_fault']
+	column_filters = ['id','useremail','port','start_date','end_date','is_end','is_fault']
+
+
+class websiteInput(db.Model):
+	__tablename__ = 'websiteInput'
+	column_display_pk = True
+	id = db.Column(db.String(200),primary_key=True)
+	useremail = db.Column(db.String(40))
+	website = db.Column(db.String(200))
+	start_date = db.Column(db.DateTime())
+	end_date = db.Column(db.DateTime())
+	is_end = db.Column(db.Integer)
+	is_fault = db.Column(db.Integer)
+
+
+class MyWebsiteInputView(ModelView):
+	column_display_pk = True
+	can_create = True
+	column_list = ('id','useremail','website','start_date','end_date','is_end','is_fault')
+	form_columns = ['id','useremail','website','start_date','end_date','is_end','is_fault']
+	column_filters = ['id','useremail','website','start_date','end_date','is_end','is_fault']
+
 
 
 class Device(db.Model):
@@ -114,6 +136,21 @@ class MyDailyDataView(ModelView):
 	form_columns = ['id', 'useremail','curr_date','data_size']
 	column_filters = ['id', 'useremail','curr_date','data_size']
 
+class HourlyAllData(db.Model):
+	__tablename__ = 'HourlyAllData'
+	column_display_pk = True
+	id = db.Column(db.String(200),primary_key=True)
+	hour = db.Column(db.Integer)
+	curr_date = db.Column(db.DateTime())
+	data_size = db.Column(db.Integer)
+
+class MyHourlyAllDataView(ModelView):
+	column_display_pk = True
+	can_create = True
+	column_list = ('id', 'hour','curr_date','data_size')
+	form_columns = ['id', 'hour','curr_date','data_size']
+	column_filters = ['id', 'hour','curr_date','data_size']
+
 
 
 adminlog = False
@@ -144,10 +181,12 @@ class MyAdminIndexView(AdminIndexView):
 
 db.create_all()
 admin = Admin(app,index_view=MyAdminIndexView())
-admin.add_view(MyInputView(Input,db.session))
+admin.add_view(MyPortInputView(portInput,db.session))
+admin.add_view(MyWebsiteInputView(websiteInput,db.session))
 admin.add_view(MyUserView(users,db.session))
 admin.add_view(MyDeviceView(Device,db.session))
 admin.add_view(MyDailyDataView(DailyData,db.session))
+admin.add_view(MyHourlyAllDataView(HourlyAllData,db.session))
 
 
 current = None
@@ -184,7 +223,7 @@ def index():
 	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')
 
 	# making files like user_squid.conf and user_mac.txt
-	name=current[:-12]
+	name=current[:-12]       # eg. name = iit2016047
 	conn = sqlite3.connect('students.sqlite3')
 	cur = conn.cursor()
 	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
@@ -274,13 +313,18 @@ def Userrequest():
 		date1 = datetime.now()
 		
 		print ("Opened database successfully")
-		curr = conn.cursor()
-		curr.execute("INSERT INTO Input (id,useremail,curr_date,port_requested,website_requested) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,inputtext2))
-		conn.commit() 
+		if inputtext.trim():
+			curr = conn.cursor()
+			curr.execute("INSERT INTO portInput (id,useremail,port,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext.trim(),date1,0,0))
+			conn.commit()
+		if inputtext2.trim():
+			curr = conn.cursor()
+			curr.execute("INSERT INTO websiteInput (id,useremail,website,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext2.trim(),date1,0,0))
+			conn.commit() 
 		conn.close()
 		name=current[:-12]
 		if inputtext2:
-			update.add_website(name,inputtext2)
+			update.add_website(name,inputtext2.trim())
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
 		return render_template("request.html",message = message)
@@ -314,6 +358,12 @@ def addDevice():
 		update.add_mac(name,inputtext)
 		#update.update_port(inputtext)
 		return render_template("addDevice.html",message = message)
+
+
+def logout():
+	current = ""
+	session['logged_in'] = False
+	return redirect('login')
 
 
 if __name__ == '__main__':

@@ -219,16 +219,19 @@ def index():
 	temp = res.read()
 	data=temp.decode('utf8')
 	#print(data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(','))
-	session['logged_in'] = True
+	
 	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')
+	if current.split('@')[1]!="iiita.ac.in" :
+		return redirect ('logout')
 
+	session['logged_in'] = True
 	# making files like user_squid.conf and user_mac.txt
 	name=current[:-12]       # eg. name = iit2016047
 	conn = sqlite3.connect('students.sqlite3')
 	cur = conn.cursor()
 	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
 	if not cur.fetchone(): 
-		filename = "/etc/squid/users.conf"
+		''''filename = "/etc/squid/users.conf"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
 		file1 = open(filename,"a")
 		file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
@@ -249,12 +252,12 @@ def index():
 		open(filename,"a").close()
 		filename = "/etc/squid/config_files/"+name+"/"+name+"_website.lst"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
-		open(filename,"a").close()
+		open(filename,"a").close()'''
 		curr = conn.cursor()
 		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
 		conn.commit() 
 	conn.close()
-	return redirect('Userrequest')
+	return redirect('dashboard')
  	
  
 @app.route('/login')
@@ -263,7 +266,7 @@ def login():
 	    callback=url_for('authorized', _external=True)
 	    return google.authorize(callback=callback)
 	else:
-		return redirect('Userrequest')
+		return redirect('dashboard')
  
  
 def get_google_auth(token=None):
@@ -313,27 +316,27 @@ def Userrequest():
 		date1 = datetime.now()
 		
 		print ("Opened database successfully")
-		if inputtext.trim():
+		if inputtext:
 			curr = conn.cursor()
-			curr.execute("INSERT INTO portInput (id,useremail,port,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext.trim(),date1,0,0))
+			curr.execute("INSERT INTO portInput (id,useremail,port,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext,date1,0,0))
 			conn.commit()
-		if inputtext2.trim():
+		if inputtext2:
 			curr = conn.cursor()
-			curr.execute("INSERT INTO websiteInput (id,useremail,website,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext2.trim(),date1,0,0))
+			curr.execute("INSERT INTO websiteInput (id,useremail,website,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext2,date1,0,0))
 			conn.commit() 
 		conn.close()
 		name=current[:-12]
-		if inputtext2:
-			update.add_website(name,inputtext2.trim())
+		'''if inputtext2:
+			update.add_website(name,inputtext2)'''
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
-		return render_template("request.html",message = message)
+		return redirect('dashboard')
 
 
 @app.route('/addDevice',methods = ['GET','POST'])
 def addDevice():
 	message = None
-	global current,type1
+	global current
 	print(current)
 	if not session.get('logged_in'):
 		return redirect('login')
@@ -355,11 +358,72 @@ def addDevice():
 		conn.commit() 
 		conn.close()
 		name=current[:-12]
-		update.add_mac(name,inputtext)
+		'''update.add_mac(name,inputtext)'''
 		#update.update_port(inputtext)
-		return render_template("addDevice.html",message = message)
+		return redirect('dashboard')
 
 
+@app.route('/dashboard',methods = ['GET'])
+def dashboard():
+	message = None
+	global current
+	if not session.get('logged_in'):
+		return redirect('login')
+	name=current[:-12]
+	conn = sqlite3.connect('students.sqlite3')
+	print ("Opened database successfully")
+	curr = conn.cursor()
+	curr.execute("SELECT mac_address,alias,id from Device where useremail=(?) ",(current,))
+	data= curr.fetchall()
+	curr.execute("SELECT port,start_date,id from portInput where useremail=(?) and is_end=(?)",(current,0,))
+	active_ports = curr.fetchall()
+	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(current,0,))
+	active_websites = curr.fetchall()
+	curr.execute("SELECT port,start_date,id from portInput where useremail=(?) and is_end=(?)",(current,1,))
+	past_ports = curr.fetchall()
+	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(current,1,))
+	past_websites = curr.fetchall()
+	conn.close()
+	return render_template("dashboard.html",name = name,data=data,active_ports=active_ports,active_websites=active_websites,past_ports=past_ports,past_websites=past_websites)
+
+@app.route('/removeMAC/<id>',methods = ['GET'])
+def removeMAC(id):
+	global current
+	print(id)
+	conn = sqlite3.connect('students.sqlite3')
+	print ("Opened database successfully")
+	curr = conn.cursor()
+	curr.execute("DELETE from Device where id=(?) and useremail=(?) ",(id,current,))
+	conn.commit()
+	conn.close()
+	return redirect('dashboard')
+
+@app.route('/removePort/<id>',methods = ['GET'])
+def removePort(id):
+	global current
+	print(id)
+	date1 = datetime.now()
+	conn = sqlite3.connect('students.sqlite3')
+	print ("Opened database successfully")
+	curr = conn.cursor()
+	curr.execute("UPDATE portInput set is_end=(?),end_date=(?) where id=(?) and useremail=(?) ",(1,date1,id,current,))
+	conn.commit()
+	conn.close()
+	return redirect('dashboard')
+
+@app.route('/removeWebsite/<id>',methods = ['GET'])
+def removeWebsite(id):
+	global current
+	print(id)
+	date1 = datetime.now()
+	conn = sqlite3.connect('students.sqlite3')
+	print ("Opened database successfully")
+	curr = conn.cursor()
+	curr.execute("UPDATE websiteInput set is_end=(?),end_date=(?) where id=(?) and useremail=(?) ",(1,date1,id,current,))
+	conn.commit()
+	conn.close()
+	return redirect('dashboard')
+@app.route('/logout',methods = ['GET'])
 def logout():
 	current = ""
 	session['logged_in'] = False
@@ -367,9 +431,9 @@ def logout():
 
 
 if __name__ == '__main__':
-	app.debug = False
+	app.debug = True
 	app.secret_key = os.urandom(12)
 
 	db.create_all()
 
-	app.run(debug = False)
+	app.run(debug = True)

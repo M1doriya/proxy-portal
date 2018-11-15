@@ -164,7 +164,7 @@ def adminlogin():
 	    if request.form['password'] == 'password' and request.form['username'] == 'admin':
 	        adminlog = True
 	        #print "auth done.................................."
-	        return redirect('http://127.0.0.1:5000/admin')				####change to host
+	        return redirect('http://10.0.2.4:5001/admin')				####change to host
 	    else:
 	        flash('wrong password!')
 	
@@ -196,7 +196,7 @@ type1 = ""
 @app.route('/')
 def index():
 	global current
-	access_token = session.get('access_token')
+	'''access_token = session.get('access_token')
 	if access_token is None:
 		return redirect(url_for('login'))
  
@@ -215,12 +215,13 @@ def index():
 	        session.pop('access_token', None)
 	        return redirect(url_for('login'))
 	    return res.read()
-
+	
 	temp = res.read()
 	data=temp.decode('utf8')
 	#print(data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(','))
 	
-	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')
+	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')'''
+	current = "icm2016007@iiita.ac.in"
 	if current.split('@')[1]!="iiita.ac.in" :
 		return redirect ('logout')
 
@@ -231,7 +232,7 @@ def index():
 	cur = conn.cursor()
 	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
 	if not cur.fetchone(): 
-		''''filename = "/etc/squid/users.conf"
+		filename = "/etc/squid/users.conf"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
 		file1 = open(filename,"a")
 		file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
@@ -241,8 +242,9 @@ def index():
 		file1 = open(filename,"a")
 		file1.write('\nacl '+name+'_mac arp "/etc/squid/config_files/'+name+'/'+name+'_mac.lst"')
 		file1.write('\nacl '+name+'_website dstdomain "/etc/squid/config_files/'+name+'/'+name+'_website.lst"')	
-		file1.write('\nhttp_access deny '+name+'_website '+name+'_mac')
-		#file1.write('\nhttp_access deny '+name+'_mac')
+		file1.write('\nhttp_access allow '+name+'_website '+name+'_mac')
+		file1.write('\nacl '+name+'_website_deny dstdomain "/etc/squid/deny_website.lst"')	
+		file1.write('\nhttp_access deny '+name+'_website_deny '+name+'_mac')
 		file1.close()			
 		filename = "/etc/squid/config_files/"+name+"/"+name+"_mac.lst"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -252,7 +254,7 @@ def index():
 		open(filename,"a").close()
 		filename = "/etc/squid/config_files/"+name+"/"+name+"_website.lst"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
-		open(filename,"a").close()'''
+		open(filename,"a").close()
 		curr = conn.cursor()
 		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
 		conn.commit() 
@@ -262,6 +264,7 @@ def index():
  
 @app.route('/login')
 def login():
+	global current
 	if not session.get('logged_in'):
 	    callback=url_for('authorized', _external=True)
 	    return google.authorize(callback=callback)
@@ -328,8 +331,8 @@ def Userrequest():
 		name=current[:-12]
 		if inputtext2:
 			update.add_website(name,inputtext2)
-		if inputtext1:
-			update.add_website(name,inputtext)
+		if inputtext:
+			update.add_port(name,inputtext)
 		
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
@@ -361,8 +364,7 @@ def addDevice():
 		conn.commit() 
 		conn.close()
 		name=current[:-12]
-		'''update.add_mac(name,inputtext)'''
-		#update.update_port(inputtext)
+		update.add_mac(name,inputtext)
 		return redirect('dashboard')
 
 
@@ -439,4 +441,4 @@ if __name__ == '__main__':
 
 	db.create_all()
 
-	app.run(debug = True)
+	app.run(debug = True, host="10.0.2.4", port=5001)

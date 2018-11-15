@@ -326,8 +326,11 @@ def Userrequest():
 			conn.commit() 
 		conn.close()
 		name=current[:-12]
-		'''if inputtext2:
-			update.add_website(name,inputtext2)'''
+		if inputtext2:
+			update.add_website(name,inputtext2)
+		if inputtext1:
+			update.add_website(name,inputtext)
+		
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
 		return redirect('dashboard')

@@ -46,7 +46,7 @@ class users(db.Model):
 	__tablename__ = 'users'
 	column_display_pk = True
 	email = db.Column(db.String(40),primary_key=True)
-	username = db.Column(db.String(40))
+	password = db.Column(db.String(50))
 	name = db.Column(db.String(50))
 	is_active = db.Column(db.Integer)
 	image_link = db.Column(db.String(200))
@@ -56,9 +56,9 @@ class users(db.Model):
 class MyUserView(ModelView):
 	column_display_pk = True
 	can_create = True
-	column_list = ('email','username','name','is_active','image_link')
-	form_columns = ['email','username','name','is_active','image_link']
-	column_filters = ['email','username','name','is_active','image_link']
+	column_list = ('email','password','name','is_active','image_link')
+	form_columns = ['email','password','name','is_active','image_link']
+	column_filters = ['email','password','name','is_active','image_link']
 
 class portInput(db.Model):
 	__tablename__ = 'portInput'
@@ -164,7 +164,7 @@ def adminlogin():
 	    if request.form['password'] == 'password' and request.form['username'] == 'admin':
 	        adminlog = True
 	        #print "auth done.................................."
-	        return redirect('http://10.0.2.4:5001/admin')				####change to host
+	        return redirect('http://127.0.0.1:5000/admin')				####change to host
 	    else:
 	        flash('wrong password!')
 	
@@ -195,36 +195,11 @@ type1 = ""
 
 @app.route('/')
 def index():
+	if session.get('logged_in'):
+		return redirect('dashboard')
+	else:
+		return redirect('login')
 	global current
-	'''access_token = session.get('access_token')
-	if access_token is None:
-		return redirect(url_for('login'))
- 
-	access_token = access_token[0]
-	from urllib.request import Request, urlopen
-	from urllib.error import URLError
-
-	headers = {'Authorization': 'OAuth '+access_token}
-	req = Request('https://www.googleapis.com/oauth2/v1/userinfo',
-	              None, headers)
-	try:
-		res = urlopen(req)
-	except URLError as e:
-	    if e.code == 401:
-	        # Unauthorized - bad token
-	        session.pop('access_token', None)
-	        return redirect(url_for('login'))
-	    return res.read()
-	
-	temp = res.read()
-	data=temp.decode('utf8')
-	#print(data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(','))
-	
-	current = data.split("\n")[2].lstrip().lstrip('"email":').lstrip().rstrip().rstrip(',').lstrip('"').rstrip('"')'''
-	current = "icm2016007@iiita.ac.in"
-	if current.split('@')[1]!="iiita.ac.in" :
-		return redirect ('logout')
-
 	session['logged_in'] = True
 	# making files like user_squid.conf and user_mac.txt
 	name=current[:-12]       # eg. name = iit2016047
@@ -232,7 +207,7 @@ def index():
 	cur = conn.cursor()
 	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
 	if not cur.fetchone(): 
-		filename = "/etc/squid/users.conf"
+		''''filename = "/etc/squid/users.conf"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
 		file1 = open(filename,"a")
 		file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
@@ -242,9 +217,8 @@ def index():
 		file1 = open(filename,"a")
 		file1.write('\nacl '+name+'_mac arp "/etc/squid/config_files/'+name+'/'+name+'_mac.lst"')
 		file1.write('\nacl '+name+'_website dstdomain "/etc/squid/config_files/'+name+'/'+name+'_website.lst"')	
-		file1.write('\nhttp_access allow '+name+'_website '+name+'_mac')
-		file1.write('\nacl '+name+'_website_deny dstdomain "/etc/squid/deny_website.lst"')	
-		file1.write('\nhttp_access deny '+name+'_website_deny '+name+'_mac')
+		file1.write('\nhttp_access deny '+name+'_website '+name+'_mac')
+		#file1.write('\nhttp_access deny '+name+'_mac')
 		file1.close()			
 		filename = "/etc/squid/config_files/"+name+"/"+name+"_mac.lst"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -254,23 +228,136 @@ def index():
 		open(filename,"a").close()
 		filename = "/etc/squid/config_files/"+name+"/"+name+"_website.lst"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
-		open(filename,"a").close()
+		open(filename,"a").close()'''
 		curr = conn.cursor()
 		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
 		conn.commit() 
 	conn.close()
 	return redirect('dashboard')
- 	
- 
-@app.route('/login')
+
+@app.route('/login',methods = ['GET','POST'])
 def login():
+	message = None
 	global current
+	if session.get('logged_in'):
+		return redirect('dashboard')
+
+	if request.method == 'GET':
+		return render_template("login.html",message = None)
+		
+	if request.method == 'POST':
+		username=request.form.get('username',)
+		print(current)
+		password=request.form.get('pass',)
+		print (username)
+		print (password)					#### change to host url 
+		conn = sqlite3.connect('students.sqlite3')
+		print ("Opened database successfully")
+		curr = conn.cursor()
+		#curr.execute("SELECT count(*) FROM users WHERE email = ?", (request.form.get('username',''),))
+		curr.execute("SELECT count(*) FROM users WHERE email = (?)",(username,))
+		data = curr.fetchone()[0]
+		if data ==0:
+			print('There is no user%s'%request.form.get('username'))
+			message = "PLEASE REGISTER USER DOES NOT EXIST"
+		else:
+			print('Component %s found in %s row(s)'%(username,data))
+			'''curr.execute("SELECT count(*) FROM users WHERE email = (?) and is_active = (?)",(username,1))
+			check = curr.fetchone()[0]
+			if check==0:
+				return render_template("login.html",message = "Please verify your email first")'''
+
+			curr.execute("SELECT count(*) FROM users WHERE email = (?) and password = (?) ",(username,password))
+			check = curr.fetchall()[0]
+			print("the value of ----- :",check[0])
+			if check[0] != 0:
+				message = "success"
+				print ("success")
+				user=username.split("@")[0]
+				session['logged_in'] = True
+				current=username
+				return redirect('dashboard')
+			else:
+				return render_template("login.html",message = "INCORRECT PASSWORD")	
+		conn.close()
+	return render_template("login.html",message = message)
+      
+
+
+@app.route('/register',methods = ['GET','POST'])
+def register():
+	message = None
+	if request.method == 'GET':
+		return render_template("student_register.html", message = message)
+	if request.method == 'POST':
+		nm = request.form.get('name',)
+		email = request.form.get('email',)
+		password=request.form.get('pass',)
+		passwordc=request.form.get('passc',)
+		if email.split("@")[1] != "iiita.ac.in":
+			message="invalid email"
+			return render_template("student_register.html", message = message)
+		if password != passwordc:
+			print ("successf")
+			message="password doesn't match"
+			return render_template("student_register.html", message = message)
+		if password == passwordc:
+			print ("success")
+			conn = sqlite3.connect('students.sqlite3')
+			cur = conn.cursor()
+			sub = email[:3].upper()
+			user_type = None
+			#secret = random.randint(1000324312,10000000000123)
+			conn = sqlite3.connect('students.sqlite3')
+			cur = conn.cursor()
+			cur.execute("SELECT * FROM users WHERE email = (?)",(email,))
+			if not cur.fetchone(): 
+				filename = "/etc/squid/users.conf"
+				os.makedirs(os.path.dirname(filename), exist_ok=True)
+				file1 = open(filename,"a")
+				file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
+				file1.close()
+				filename = "/etc/squid/config_files/"+name+"/"+name+"_squid.conf"
+				os.makedirs(os.path.dirname(filename), exist_ok=True)
+				file1 = open(filename,"a")
+				file1.write('\nacl '+name+'_mac arp "/etc/squid/config_files/'+name+'/'+name+'_mac.lst"')
+				file1.write('\nacl '+name+'_website dstdomain "/etc/squid/config_files/'+name+'/'+name+'_website.lst"')	
+				file1.write('\nhttp_access allow '+name+'_website '+name+'_mac')
+				file1.write('\nacl '+name+'_website_deny dstdomain "/etc/squid/deny_website.lst"')	
+				file1.write('\nhttp_access deny '+name+'_website_deny '+name+'_mac')
+				file1.close()			
+				filename = "/etc/squid/config_files/"+name+"/"+name+"_mac.lst"
+				os.makedirs(os.path.dirname(filename), exist_ok=True)
+				open(filename,"a").close()
+				filename = "/etc/squid/config_files/"+name+"/"+name+"_port.lst"
+				os.makedirs(os.path.dirname(filename), exist_ok=True)
+				open(filename,"a").close()
+				filename = "/etc/squid/config_files/"+name+"/"+name+"_website.lst"
+				os.makedirs(os.path.dirname(filename), exist_ok=True)
+				open(filename,"a").close()
+				cur = conn.cursor()
+				cur.execute("INSERT INTO USERS (email,name,password,is_active) values (?,?,?,?)",\
+					(email,nm,password,1))	
+				conn.commit() 
+				print ("insert into user success")
+				return redirect(url_for('login'))
+			else :
+				message = "Email already exists."
+			#msg = Message('Hello', sender = 'iit2016047@iiita.ac.in', recipients = [email])
+			#msg.body = "Hello confirm your email " + "http://127.0.0.1:5000/emailverify/"+email.split("@")[0]+"/"+str(secret)
+			#mail.send(msg)
+			conn.close()
+			
+	return render_template("student_register.html", message = message) 	
+ 
+'''@app.route('/login')
+def login():
 	if not session.get('logged_in'):
 	    callback=url_for('authorized', _external=True)
 	    return google.authorize(callback=callback)
 	else:
 		return redirect('dashboard')
- 
+ '''
  
 def get_google_auth(token=None):
     if token:
@@ -331,8 +418,8 @@ def Userrequest():
 		name=current[:-12]
 		if inputtext2:
 			update.add_website(name,inputtext2)
-		if inputtext:
-			update.add_port(name,inputtext)
+		if inputtext1:
+			update.add_website(name,inputtext)
 		
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
@@ -364,7 +451,8 @@ def addDevice():
 		conn.commit() 
 		conn.close()
 		name=current[:-12]
-		update.add_mac(name,inputtext)
+		'''update.add_mac(name,inputtext)'''
+		#update.update_port(inputtext)
 		return redirect('dashboard')
 
 
@@ -372,9 +460,11 @@ def addDevice():
 def dashboard():
 	message = None
 	global current
+	print(current)
 	if not session.get('logged_in'):
 		return redirect('login')
 	name=current[:-12]
+	print(name)
 	conn = sqlite3.connect('students.sqlite3')
 	print ("Opened database successfully")
 	curr = conn.cursor()
@@ -441,4 +531,4 @@ if __name__ == '__main__':
 
 	db.create_all()
 
-	app.run(debug = True, host="10.0.2.4", port=5001)
+	app.run(debug = True)

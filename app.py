@@ -311,6 +311,7 @@ def register():
 			conn = sqlite3.connect('students.sqlite3')
 			cur = conn.cursor()
 			cur.execute("SELECT * FROM users WHERE email = (?)",(email,))
+			name=email.split("@")[0]
 			if not cur.fetchone(): 
 				filename = "/etc/squid/users.conf"
 				os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -451,7 +452,7 @@ def addDevice():
 		conn.commit() 
 		conn.close()
 		name=current[:-12]
-		'''update.add_mac(name,inputtext)'''
+		update.add_mac(name,inputtext)
 		#update.update_port(inputtext)
 		return redirect('dashboard')
 
@@ -531,4 +532,4 @@ if __name__ == '__main__':
 
 	db.create_all()
 
-	app.run(debug = True)
+	app.run(debug = True,host="10.0.2.4",port=5000)

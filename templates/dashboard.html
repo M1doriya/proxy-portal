@@ -18,6 +18,7 @@
     <!--     Fonts and icons     -->
     <link href="http://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css" rel="stylesheet">
     <link href='http://fonts.googleapis.com/css?family=Roboto:400,700,300|Material+Icons' rel='stylesheet' type='text/css'>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 
 <body>
@@ -148,6 +149,22 @@
                                     </table>                                       
                                 </div>
                             </div>
+                            <div style="margin-top: 0px;" class="card">
+                                <div class="card-header" data-background-color="purple">
+                                    <h4 class="title">Your Daily Data Usage</h4>
+                                </div>
+                                <div class="col-md-4" id="graph" style="width:90%;height:500px;">
+                                </div>
+
+                            </div>
+                            <div style="margin-top: 0px;" class="card">
+                                <div class="card-header" data-background-color="purple">
+                                    <h4 class="title">Previous Day Total Hourly Data Usage</h4>
+                                </div>
+                                <div class="col-md-4" id="graph2" style="width:90%;height:600px;">
+                                </div>
+
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -187,10 +204,89 @@
 <script src="../static/js/demo.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
-
         // Javascript method's body can be found in static/js/demos.js
-        demo.initDashboardPageCharts();
+        TESTER = document.getElementById('graph');
+        
+        var layout = {
+          title: 'Data Usage Graph',
+          xaxis: {
+            title: 'Date',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            },
+            rangemode: 'nonnegative',
+            zeroline: true,
+            showline: true,
+            zerolinecolor: '#969696',
+            zerolinewidth: 4,
+            linecolor: '#636363',
+            linewidth: 6
+          },
+          yaxis: {
+            title: 'Data (Bytes)',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            },
+            rangemode: 'nonnegative',
+            zeroline: true,
+            showline: true,
+            zerolinecolor: '#969696',
+            zerolinewidth: 4,
+            linecolor: '#636363',
+            linewidth: 6
+          }
+        };
+        Plotly.plot( TESTER, [{
+            x: {{data1x|safe}},
+            y: {{data1y|safe}} }],layout);
 
+        Graph2 = document.getElementById('graph2');
+        var layout2 = {
+          title: 'Hourly Data Usage Graph',
+          xaxis: {
+            title: 'Hour',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            },
+            range:[0,23],
+            rangemode: 'nonnegative',
+            zeroline: true,
+            showline: true,
+            zerolinecolor: '#969696',
+            zerolinewidth: 4,
+            linecolor: '#636363',
+            linewidth: 6
+          },
+          yaxis: {
+            title: 'Data (Bytes)',
+            titlefont: {
+              family: 'Courier New, monospace',
+              size: 18,
+              color: '#7f7f7f'
+            },
+            range:[0,10000000],
+            rangemode: 'nonnegative',
+            zeroline: true,
+            showline: true,
+            zerolinecolor: '#969696',
+            zerolinewidth: 4,
+            linecolor: '#636363',
+            linewidth: 6
+          }
+        };
+        Plotly.plot( Graph2, [{
+            x: {{data2x|safe}},
+            y: {{data2y|safe}} }],layout2);
+        
+        /* Current Plotly.js version */
+        console.log( Plotly.BUILD );
+        demo.initDashboardPageCharts();
     });
 </script>
 

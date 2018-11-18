@@ -164,7 +164,7 @@ def adminlogin():
 	    if request.form['password'] == 'password' and request.form['username'] == 'admin':
 	        adminlog = True
 	        #print "auth done.................................."
-	        return redirect('http://127.0.0.1:5000/admin')				####change to host
+	        return redirect('http://0.0.0.0:5000/admin')				####change to host
 	    else:
 	        flash('wrong password!')
 	
@@ -207,7 +207,7 @@ def index():
 	cur = conn.cursor()
 	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
 	if not cur.fetchone(): 
-		''''filename = "/etc/squid/users.conf"
+		'''filename = "/etc/squid/users.conf"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
 		file1 = open(filename,"a")
 		file1.write("\ninclude /etc/squid/config_files/"+name+"/"+name+"_squid.conf")
@@ -400,10 +400,10 @@ def Userrequest():
 		inputtext = request.form.get('inputtext',)
 		inputtext2 = request.form.get('inputtext2',)
 		conn = sqlite3.connect('students.sqlite3')
-		'''cur = conn.cursor()
+		cur = conn.cursor()
 		cur.execute("SELECT mac_address FROM Device WHERE useremail = (?) and alias = (?)",(current,inputtext2,))
 		mac_address = cur.fetchone()[0]
-		print(mac_address)'''
+		print(mac_address)
 		date1 = datetime.now()
 		
 		print ("Opened database successfully")
@@ -420,7 +420,7 @@ def Userrequest():
 		if inputtext2:
 			update.add_website(name,inputtext2)
 		if inputtext1:
-			update.add_website(name,inputtext)
+			update.add_port(name,inputtext)
 		
 		#update.update_port(inputtext)
 		message = "port/website request accepted"
@@ -479,8 +479,27 @@ def dashboard():
 	past_ports = curr.fetchall()
 	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(current,1,))
 	past_websites = curr.fetchall()
+
+	curr.execute("SELECT curr_date,data_size from DailyData where useremail=(?) order by curr_date desc limit 7",(current,))
+	dailydata = curr.fetchall()
+	data1x = []
+	data1y = []
+	for i in dailydata:
+		data1x.append(str(i[0].split()[0]))
+		data1y.append(i[1])
+
+
+	curr.execute("SELECT hour,data_size from HourlyAllData order by id desc limit(24)")
+	hourlydata = curr.fetchall()
+	data2x = []
+	data2y = []
+	print(hourlydata)
+	for i in hourlydata:
+		data2x.append(i[0])
+		data2y.append(i[1])
+
 	conn.close()
-	return render_template("dashboard.html",name = name,data=data,active_ports=active_ports,active_websites=active_websites,past_ports=past_ports,past_websites=past_websites)
+	return render_template("dashboard.html",data2x=json.dumps(data2x),data2y=json.dumps(data2y),data1x=json.dumps(data1x),data1y=json.dumps(data1y),name = name,data=data,active_ports=active_ports,active_websites=active_websites,past_ports=past_ports,past_websites=past_websites)
 
 @app.route('/removeMAC/<id>',methods = ['GET'])
 def removeMAC(id):
@@ -519,6 +538,8 @@ def removeWebsite(id):
 	conn.commit()
 	conn.close()
 	return redirect('dashboard')
+
+
 @app.route('/logout',methods = ['GET'])
 def logout():
 	current = ""
@@ -532,4 +553,4 @@ if __name__ == '__main__':
 
 	db.create_all()
 
-	app.run(debug = True,host="10.0.2.4",port=5000)
+	app.run(debug = True, host="0.0.0.0",port=5000)

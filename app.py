@@ -401,9 +401,6 @@ def Userrequest():
 		inputtext2 = request.form.get('inputtext2',)
 		conn = sqlite3.connect('students.sqlite3')
 		cur = conn.cursor()
-		cur.execute("SELECT mac_address FROM Device WHERE useremail = (?) and alias = (?)",(current,inputtext2,))
-		mac_address = cur.fetchone()[0]
-		print(mac_address)
 		date1 = datetime.now()
 		
 		print ("Opened database successfully")
@@ -419,7 +416,7 @@ def Userrequest():
 		name=current[:-12]
 		if inputtext2:
 			update.add_website(name,inputtext2)
-		if inputtext1:
+		if inputtext:
 			update.add_port(name,inputtext)
 		
 		#update.update_port(inputtext)

@@ -205,7 +205,7 @@ def index():
 	name=current[:-12]       # eg. name = iit2016047
 	conn = sqlite3.connect('students.sqlite3')
 	cur = conn.cursor()
-	cur.execute("SELECT * FROM users WHERE email = (?)",(current,))
+	cur.execute("SELECT * FROM users WHERE email = (?)",(session['username'],))
 	if not cur.fetchone(): 
 		'''filename = "/etc/squid/users.conf"
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -230,7 +230,7 @@ def index():
 		os.makedirs(os.path.dirname(filename), exist_ok=True)
 		open(filename,"a").close()'''
 		curr = conn.cursor()
-		curr.execute("INSERT INTO users (email) VALUES (?)",(current,))
+		curr.execute("INSERT INTO users (email) VALUES (?)",(session['username'],))
 		conn.commit() 
 	conn.close()
 	return redirect('dashboard')
@@ -276,6 +276,7 @@ def login():
 				user=username.split("@")[0]
 				session['logged_in'] = True
 				current=username
+				session['username'] = username
 				return redirect('dashboard')
 			else:
 				return render_template("login.html",message = "INCORRECT PASSWORD")	
@@ -406,14 +407,14 @@ def Userrequest():
 		print ("Opened database successfully")
 		if inputtext:
 			curr = conn.cursor()
-			curr.execute("INSERT INTO portInput (id,useremail,port,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext,date1,0,0))
+			curr.execute("INSERT INTO portInput (id,useremail,port,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+session['username'],session['username'],inputtext,date1,0,0))
 			conn.commit()
 		if inputtext2:
 			curr = conn.cursor()
-			curr.execute("INSERT INTO websiteInput (id,useremail,website,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+current,current,inputtext2,date1,0,0))
+			curr.execute("INSERT INTO websiteInput (id,useremail,website,start_date,is_end,is_fault) VALUES (?,?,?,?,?,?)",(str(date1)+session['username'],session['username'],inputtext2,date1,0,0))
 			conn.commit() 
 		conn.close()
-		name=current[:-12]
+		name=session['username'][:-12]
 		if inputtext2:
 			update.add_website(name,inputtext2)
 		if inputtext:
@@ -445,10 +446,10 @@ def addDevice():
 		conn = sqlite3.connect('students.sqlite3')
 		print ("Opened database successfully")
 		curr = conn.cursor()
-		curr.execute("INSERT INTO Device (id,useremail,curr_date,mac_address,alias) VALUES (?,?,?,?,?)",(str(date1)+current,current,date1,inputtext,alias))
+		curr.execute("INSERT INTO Device (id,useremail,curr_date,mac_address,alias) VALUES (?,?,?,?,?)",(str(date1)+session['username'],session['username'],date1,inputtext,alias))
 		conn.commit() 
 		conn.close()
-		name=current[:-12]
+		name=session['username'][:-12]
 		update.add_mac(name,inputtext)
 		#update.update_port(inputtext)
 		return redirect('dashboard')
@@ -461,23 +462,23 @@ def dashboard():
 	print(current)
 	if not session.get('logged_in'):
 		return redirect('login')
-	name=current[:-12]
+	name=session['username'][:-12]
 	print(name)
 	conn = sqlite3.connect('students.sqlite3')
 	print ("Opened database successfully")
 	curr = conn.cursor()
-	curr.execute("SELECT mac_address,alias,id from Device where useremail=(?) ",(current,))
+	curr.execute("SELECT mac_address,alias,id from Device where useremail=(?) ",(session['username'],))
 	data= curr.fetchall()
-	curr.execute("SELECT port,start_date,id from portInput where useremail=(?) and is_end=(?)",(current,0,))
+	curr.execute("SELECT port,start_date,id from portInput where useremail=(?) and is_end=(?)",(session['username'],0,))
 	active_ports = curr.fetchall()
-	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(current,0,))
+	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(session['username'],0,))
 	active_websites = curr.fetchall()
-	curr.execute("SELECT port,start_date,id from portInput where useremail=(?) and is_end=(?)",(current,1,))
+	curr.execute("SELECT port,start_date,id from portInput where useremail=(?) and is_end=(?)",(session['username'],1,))
 	past_ports = curr.fetchall()
-	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(current,1,))
+	curr.execute("SELECT website,start_date,id from websiteInput where useremail=(?) and is_end=(?)",(session['username'],1,))
 	past_websites = curr.fetchall()
 
-	curr.execute("SELECT curr_date,data_size from DailyData where useremail=(?) order by curr_date desc limit 7",(current,))
+	curr.execute("SELECT curr_date,data_size from DailyData where useremail=(?) order by curr_date desc limit 7",(session['username'],))
 	dailydata = curr.fetchall()
 	data1x = []
 	data1y = []
@@ -505,9 +506,15 @@ def removeMAC(id):
 	conn = sqlite3.connect('students.sqlite3')
 	print ("Opened database successfully")
 	curr = conn.cursor()
-	curr.execute("DELETE from Device where id=(?) and useremail=(?) ",(id,current,))
+	curr.execute("SELECT mac_address from Device where id=(?) and useremail=(?) ",(id,session['username'],))
+	mac = curr.fetchone()[0]
+	print(mac)
+	update.remove_mac(session['username'][:-12],mac)
+	curr = conn.cursor()
+	curr.execute("DELETE from Device where id=(?) and useremail=(?) ",(id,session['username'],))
 	conn.commit()
 	conn.close()
+	
 	return redirect('dashboard')
 
 @app.route('/removePort/<id>',methods = ['GET'])
@@ -518,7 +525,11 @@ def removePort(id):
 	conn = sqlite3.connect('students.sqlite3')
 	print ("Opened database successfully")
 	curr = conn.cursor()
-	curr.execute("UPDATE portInput set is_end=(?),end_date=(?) where id=(?) and useremail=(?) ",(1,date1,id,current,))
+	curr.execute("SELECT port from portInput where id=(?) and useremail=(?) ",(id,session['username'],))
+	port = curr.fetchone()[0]
+	print(port)
+	update.remove_port(session['username'][:-12],port)
+	curr.execute("UPDATE portInput set is_end=(?),end_date=(?) where id=(?) and useremail=(?) ",(1,date1,id,session['username'],))
 	conn.commit()
 	conn.close()
 	return redirect('dashboard')
@@ -531,7 +542,11 @@ def removeWebsite(id):
 	conn = sqlite3.connect('students.sqlite3')
 	print ("Opened database successfully")
 	curr = conn.cursor()
-	curr.execute("UPDATE websiteInput set is_end=(?),end_date=(?) where id=(?) and useremail=(?) ",(1,date1,id,current,))
+	curr.execute("SELECT website from websiteInput where id=(?) and useremail=(?) ",(id,session['username'],))
+	website = curr.fetchone()[0]
+	print(website)
+	update.remove_website(session['username'][:-12],website)
+	curr.execute("UPDATE websiteInput set is_end=(?),end_date=(?) where id=(?) and useremail=(?) ",(1,date1,id,session['username'],))
 	conn.commit()
 	conn.close()
 	return redirect('dashboard')
@@ -540,7 +555,8 @@ def removeWebsite(id):
 @app.route('/logout',methods = ['GET'])
 def logout():
 	current = ""
-	session['logged_in'] = False
+	session.pop('username',None)	
+	session['logged_in']=False
 	return redirect('login')
 
 
@@ -550,4 +566,4 @@ if __name__ == '__main__':
 
 	db.create_all()
 
-	app.run(debug = True, host="0.0.0.0",port=5000)
+	app.run(debug = True,threaded=True, host="0.0.0.0",port=5000)
